@@ -1,4 +1,10 @@
 import { SHEET_NAME, sheets, SPREADSHEET_ID } from "./lib/google";
+import { AiResponse, generateMessage } from "./lib/openai";
+
+// Função utilitária para pausar o script (evitar limite da API)
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 
 // * ---- MAIN FUNCTION ---- * //
@@ -25,18 +31,37 @@ async function main() {
 
                 // TODO: AJUSTAR ORDEM DAS COLUNAS
                 const lead = {
-                    nome: row[0],
-                    categoria: row[2],
-                    contato: row[3],
-                    dor: row[6],
-                    highlight: row[7],
-                    obs: row[8],
+                    nome: row[0] || 'Lead Sem Nome',
+                    categoria: row[2] || '',
+                    contato: row[3] || '',
+                    dor: row[6] || '',
+                    highlight: row[7] || '',
+                    obs: row[8] || '',
                 };
 
-                console.log(`[LEAD #${i}]: ${lead.nome} | Dor: ${lead.dor || '--'}`);
+                // TODO: Adicionar coluna 'MSG_GERADA' na planilha
+                const isGenerated = row[14] === 'TRUE'
+
+                if (isGenerated) {
+                    continue;
+                }
+
+                // Chama a IA
+                const aiResponse: AiResponse = await generateMessage(lead);
+
+                // Loga a resposta
+                console.log(`--- Resposta da IA para ${lead.nome} ---`);
+                console.log(`[ANÁLISE]: ${aiResponse.analise}`);
+                console.log(`[OPÇÃO 1]: ${aiResponse.opcao1}`);
+                console.log(`-----------------------------------\n`);
+
+                // TODO: Escrever aiResponse.opcao1 e aiResponse.opcao2 de volta na planilha
+                // TODO: Escrever 'TRUE' na coluna "MSG_GERADA"
+
+                await sleep(500);
             }
 
-            console.log('--- FIM DA LEITURA ---');
+            console.log('--- PROCESSAMENTO DE LEADS CONCLUÍDO ---');
         }
         else {
             console.log('Nenhum dado encontrado na planilha.');
